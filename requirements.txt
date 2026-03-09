@@ -1,0 +1,19 @@
+# Playwright 测试框架
+playwright>=1.40.0
+
+# Pytest 测试框架
+pytest>=7.4.0
+
+# Allure 报告
+allure-pytest>=2.13.0
+allure-python-commons>=2.13.0
+
+# HTML 报告
+pytest-html>=4.0.0
+
+# 数据驱动
+PyYAML>=6.0
+
+# 其他依赖
+python-slugify>=8.0.0
+requests>=2.31.0

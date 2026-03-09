@@ -1,0 +1,60 @@
+# ==========================================
+# 登录功能测试数据
+# 测试网站: https://royal-pre.cs.kemai.com.cn
+# 字段说明:
+#   account  - 账号（手机号）
+#   password - 密码
+# ==========================================
+
+# ------------------------------------------
+# 登录成功场景
+# ------------------------------------------
+login_success:
+  - case_id: "TC_SUCCESS_001"
+    account: "15901234560"
+    password: "123123123"
+    description: "正确的账号和密码登录成功"
+
+# ------------------------------------------
+# 登录失败 - 空值校验
+# 这类场景点击登录后可能直接出现表单校验错误，不触发滑块
+# ------------------------------------------
+login_empty_validation:
+  - case_id: "TC_EMPTY_001"
+    account: ""
+    password: "123123123"
+    description: "账号为空"
+    expected_error: "请输入登录账号"
+
+  - case_id: "TC_EMPTY_002"
+    account: "15901234560"
+    password: ""
+    description: "密码为空"
+    expected_error: "请输入登录密码"
+
+# ------------------------------------------
+# 登录失败 - 错误凭证
+# 这类场景会触发滑块验证，滑块完成后返回错误提示
+# ------------------------------------------
+login_wrong_credentials:
+  - case_id: "TC_WRONG_001"
+    account: "15901234560"
+    password: "wrongpassword"
+    description: "密码错误"
+    expected_error: "账号或密码错误"
+
+  - case_id: "TC_WRONG_002"
+    account: "13800138000"
+    password: "123123123"
+    description: "账号未注册"
+    expected_error: "账号或密码错误"
+
+# ------------------------------------------
+# 登录失败 - 无效输入格式
+# ------------------------------------------
+login_invalid_format:
+  - case_id: "TC_FORMAT_001"
+    account: "15901234560"
+    password: "123"
+    description: "密码长度不足"
+    expected_error: "登录密码长度不能少于6位"
