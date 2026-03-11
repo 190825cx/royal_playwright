@@ -127,53 +127,16 @@ class BrandPage(BasePage):
         time.sleep(1)
 
     def fill_brand_name(self, name: str) -> None:
-        """填写品牌名称（新增面板中）"""
-        # 等待抽屉加载完成
-        time.sleep(2)
-
-        # 方法1: 通过placeholder精确查找
+        """填写品牌名称（新增面板中，modal内第2个input）"""
         try:
-            name_input = self.page.get_by_placeholder("请输入名称")
-            name_input.wait_for(state="visible", timeout=8000)
-            name_input.click()
-            time.sleep(0.3)
-            name_input.fill(name)
+            modal = self.page.locator('.ivu-modal-wrap:visible').last
+            inp = modal.locator('input.ivu-input').nth(1)
+            inp.wait_for(state='visible', timeout=8000)
+            inp.click()
+            inp.fill(name)
             print(f"填写品牌名称: {name}")
-            return
         except Exception as e:
-            print(f"方法1填写品牌名称失败: {e}")
-
-        # 方法2: 查找抽屉内的所有输入框
-        try:
-            drawer = self.page.locator("[class*='drawer']").last
-            if drawer.is_visible():
-                inputs = drawer.locator("input").all()
-                print(f"抽屉内找到 {len(inputs)} 个输入框")
-                if len(inputs) >= 2:
-                    inputs[1].click()
-                    time.sleep(0.3)
-                    inputs[1].fill(name)
-                    print(f"填写品牌名称(方法2): {name}")
-                    return
-        except Exception as e:
-            print(f"方法2填写品牌名称失败: {e}")
-
-        # 方法3: 使用JS直接填充 - Playwright需要用arg参数传递
-        try:
-            self.page.evaluate("""(name) => {
-                const inputs = document.querySelectorAll('input');
-                for (let i = 0; i < inputs.length; i++) {
-                    const p = inputs[i].placeholder || '';
-                    if (p.includes('名称')) {
-                        inputs[i].value = name;
-                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                        return;
-                    }
-                }
-            }""", name)
-            print(f"填写品牌名称(方法3): {name}")
-        except Exception as e:
-            print(f"方法3填写品牌名称失败: {e}")
+            print(f"填写品牌名称失败: {e}")
 
     def save_brand(self) -> None:
         """点击保存按钮并等待结果"""
@@ -258,18 +221,13 @@ class BrandPage(BasePage):
     def confirm_delete(self) -> None:
         """确认删除弹窗"""
         try:
-            confirm_btn = self.page.get_by_role("button", name="确定").first
-            confirm_btn.wait_for(state="visible", timeout=5000)
+            confirm_btn = self.page.locator('.ivu-modal-wrap:visible .ivu-btn-primary').last
+            confirm_btn.wait_for(state='visible', timeout=5000)
             confirm_btn.click()
             print("已确认删除")
             time.sleep(2)
         except Exception as e:
             print(f"确认删除失败: {e}")
-            try:
-                self.page.keyboard.press("Enter")
-                time.sleep(1)
-            except:
-                pass
 
     def delete_brand(self) -> None:
         """选中第一行并删除"""
@@ -297,53 +255,18 @@ class BrandPage(BasePage):
             self.fill_brand_name(brand_data["name"])
 
     def fill_brand_code(self, code: str) -> None:
-        """填写品牌编码（新增面板中）"""
-        # 等待抽屉加载完成
-        time.sleep(2)
-
-        # 方法1: 通过placeholder精确查找
+        """填写品牌编码（新增面板中，modal内第1个input）"""
         try:
-            code_input = self.page.get_by_placeholder("请输入编码")
-            code_input.wait_for(state="visible", timeout=8000)
-            code_input.click()
-            time.sleep(0.3)
-            code_input.fill(code)
+            modal = self.page.locator('.ivu-modal-wrap:visible').last
+            inp = modal.locator('input.ivu-input').nth(0)
+            inp.wait_for(state='visible', timeout=8000)
+            inp.click(click_count=3)
+            inp.press_sequentially(code, delay=50)
+            inp.blur()
+            time.sleep(0.2)
             print(f"填写品牌编码: {code}")
-            return
         except Exception as e:
-            print(f"方法1填写品牌编码失败: {e}")
-
-        # 方法2: 查找抽屉内的所有输入框
-        try:
-            drawer = self.page.locator("[class*='drawer']").last
-            if drawer.is_visible():
-                inputs = drawer.locator("input").all()
-                print(f"抽屉内找到 {len(inputs)} 个输入框")
-                if len(inputs) >= 1:
-                    inputs[0].click()
-                    time.sleep(0.3)
-                    inputs[0].fill(code)
-                    print(f"填写品牌编码(方法2): {code}")
-                    return
-        except Exception as e:
-            print(f"方法2填写品牌编码失败: {e}")
-
-        # 方法3: 使用JS直接填充 - Playwright需要用arg参数传递
-        try:
-            self.page.evaluate("""(code) => {
-                const inputs = document.querySelectorAll('input');
-                for (let i = 0; i < inputs.length; i++) {
-                    const p = inputs[i].placeholder || '';
-                    if (p.includes('编码')) {
-                        inputs[i].value = code;
-                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                        return;
-                    }
-                }
-            }""", code)
-            print(f"填写品牌编码(方法3): {code}")
-        except Exception as e:
-            print(f"方法3填写品牌编码失败: {e}")
+            print(f"填写品牌编码失败: {e}")
 
     # ------------------------------------------
     # 断言辅助
@@ -390,30 +313,20 @@ class BrandPage(BasePage):
         try:
             self.wait_for_spinner_hidden(timeout=10000)
             time.sleep(1)
-            page_text = self.page.evaluate("() => document.body.innerText")
-            if name and name in page_text:
-                print(f"在页面文本中找到品牌名称: {name}")
-                return True
-            if code and code in page_text:
-                print(f"在页面文本中找到品牌编码: {code}")
-                return True
-            # 进一步检查表格
-            table_text = self.page.evaluate("""
+            grid_text = self.page.evaluate("""
                 () => {
-                    const rows = document.querySelectorAll('.ivu-table-tbody tr');
-                    const texts = [];
-                    rows.forEach(row => {
-                        const text = row.innerText || row.textContent || '';
-                        if (text.trim()) texts.push(text.trim());
-                    });
-                    return texts;
+                    const grid = document.querySelector('.km-grid-body-scroll') ||
+                                 document.querySelector('.km-grid-body') ||
+                                 document.querySelector('.km-grid');
+                    return grid ? (grid.innerText || grid.textContent || '') : '';
                 }
             """)
-            for text in table_text:
-                if name and name in text:
-                    return True
-                if code and code in text:
-                    return True
+            if name and name in grid_text:
+                print(f"在表格中找到品牌名称: {name}")
+                return True
+            if code and code in grid_text:
+                print(f"在表格中找到品牌编码: {code}")
+                return True
             return False
         except Exception as e:
             print(f"is_brand_exists 异常: {e}")

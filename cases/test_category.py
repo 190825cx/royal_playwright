@@ -65,8 +65,8 @@ class TestCategory:
         # 准备测试数据
         timestamp = int(time.time())
         category_data = {
-            "code": f"{timestamp % 100:02d}",  # 类别编码（两位数字）
-            "name": f"测试类别{timestamp % 100:02d}",  # 类别名称
+            "code": f"{timestamp % 90 + 10:02d}",  # 类别编码（两位数字10-99）
+            "name": f"测试{timestamp % 10000:04d}",  # 类别名称（4位数字后缀保证唯一）
         }
         print(f"测试类别数据: {category_data}")
 
@@ -116,7 +116,7 @@ class TestCategory:
             success_msg = self.category_page.get_success_message(timeout=5000)
             print(f"删除提示: {success_msg}")
 
-            # 验证类别已被删除
+            # 验证类别已被删除（搜索精确名称后表格应为空）
             self.category_page.search_category(category_data["name"])
             time.sleep(2)
             assert not self.category_page.is_category_exists(name=category_data["name"]), (

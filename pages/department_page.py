@@ -190,37 +190,18 @@ class DepartmentPage(BasePage):
         time.sleep(2)
 
     def fill_department_name(self, name: str) -> None:
-        """填写部门名称（新增面板中）"""
+        """填写部门名称（新增面板中，modal内第2个input）"""
         try:
-            # 等待一下确保面板加载完成
-            time.sleep(1)
-
-            # 获取新增面板中的所有输入框 - 第二个是部门名称
-            inputs = self.page.locator(".ivu-modal-body input.ivu-input").all()
-            if len(inputs) >= 2:
-                inputs[1].wait_for(state="visible", timeout=5000)
-                inputs[1].click()
-                inputs[1].fill(name)
-                print(f"填写部门名称: {name}")
-                return
+            modal = self.page.locator('.ivu-modal-wrap:visible').last
+            inp = modal.locator('input.ivu-input-with-word-count').nth(1)
+            inp.wait_for(state='visible', timeout=8000)
+            inp.click(click_count=3)
+            inp.press_sequentially(name, delay=50)
+            inp.blur()
+            time.sleep(0.2)
+            print(f"填写部门名称: {name}")
         except Exception as e:
             print(f"填写部门名称失败: {e}")
-
-        # 备用方式
-        try:
-            all_inputs = self.page.locator("input.ivu-input").all()
-            for inp in all_inputs:
-                try:
-                    if inp.is_visible():
-                        placeholder = inp.get_attribute("placeholder")
-                        if placeholder and "请输入" in str(placeholder):
-                            inp.fill(name)
-                            print(f"填写部门名称(备用): {name}")
-                            return
-                except:
-                    pass
-        except Exception as e2:
-            print(f"备用方式也失败: {e2}")
 
     def save_department(self) -> None:
         """点击保存按钮并等待结果"""
@@ -235,11 +216,10 @@ class DepartmentPage(BasePage):
     # 查询
     # ------------------------------------------
     def fill_search_input(self, text: str) -> None:
-        """填写查询条件（工具栏搜索框）"""
+        """填写查询条件（工具栏搜索框，第一个ivu-input，placeholder为名称/编码）"""
         try:
-            # 工具栏搜索框，placeholder="名称"
-            search_box = self.page.get_by_placeholder("名称").first
-            search_box.wait_for(state="visible", timeout=10000)
+            search_box = self.page.locator('input.ivu-input').first
+            search_box.wait_for(state='visible', timeout=10000)
             search_box.click()
             search_box.clear()
             search_box.fill(text)
@@ -303,20 +283,19 @@ class DepartmentPage(BasePage):
         time.sleep(1)
 
     def confirm_delete(self) -> None:
-        """确认删除弹窗"""
+        """确认删除弹窗（ivu-confirm弹窗，确定是footer第二个按钮）"""
         try:
-            confirm_btn = self.page.get_by_role("button", name="确定").first
-            confirm_btn.wait_for(state="visible", timeout=5000)
-            confirm_btn.click()
+            # 先等待confirm弹窗出现
+            confirm_footer = self.page.locator('.ivu-modal-confirm-footer')
+            confirm_footer.wait_for(state='visible', timeout=5000)
+            # 确定是footer中第二个按钮（第一个是「取消 Esc」）
+            confirm_btn = confirm_footer.locator('button').nth(1)
+            confirm_btn.wait_for(state='visible', timeout=3000)
+            confirm_btn.click(force=True)
             print("已确认删除")
-            time.sleep(2)
+            time.sleep(3)
         except Exception as e:
             print(f"确认删除失败: {e}")
-            try:
-                self.page.keyboard.press("Enter")
-                time.sleep(1)
-            except:
-                pass
 
     def delete_department(self) -> None:
         """选中第一行并删除"""
@@ -344,37 +323,18 @@ class DepartmentPage(BasePage):
             self.fill_department_name(department_data["name"])
 
     def fill_department_code(self, code: str) -> None:
-        """填写部门编码（新增面板中）"""
+        """填写部门编码（新增面板中，modal内第1个input）"""
         try:
-            # 等待新增面板加载完成
-            time.sleep(1)
-
-            # 获取新增面板中的所有输入框
-            inputs = self.page.locator(".ivu-modal-body input.ivu-input").all()
-            if len(inputs) >= 1:
-                inputs[0].wait_for(state="visible", timeout=5000)
-                inputs[0].click()
-                inputs[0].fill(code)
-                print(f"填写部门编码: {code}")
-                return
+            modal = self.page.locator('.ivu-modal-wrap:visible').last
+            inp = modal.locator('input.ivu-input-with-word-count').nth(0)
+            inp.wait_for(state='visible', timeout=8000)
+            inp.click(click_count=3)
+            inp.press_sequentially(code, delay=50)
+            inp.blur()
+            time.sleep(0.2)
+            print(f"填写部门编码: {code}")
         except Exception as e:
             print(f"填写部门编码失败: {e}")
-
-        # 备用方式
-        try:
-            all_inputs = self.page.locator("input.ivu-input").all()
-            for inp in all_inputs:
-                try:
-                    if inp.is_visible():
-                        placeholder = inp.get_attribute("placeholder")
-                        if placeholder and "编码" in str(placeholder):
-                            inp.fill(code)
-                            print(f"填写部门编码(备用): {code}")
-                            return
-                except:
-                    pass
-        except Exception as e2:
-            print(f"备用方式也失败: {e2}")
 
     # ------------------------------------------
     # 断言辅助
@@ -414,36 +374,33 @@ class DepartmentPage(BasePage):
 
     def is_department_exists(self, name: str = None, code: str = None) -> bool:
         """
-        检查部门是否存在于列表中
-        :param name: 部门名称
-        :param code: 部门编码
+        检查部门是否存在于表格列表中（逐行精确匹配）
         """
         try:
             self.wait_for_spinner_hidden(timeout=10000)
             time.sleep(1)
-            page_text = self.page.evaluate("() => document.body.innerText")
-            if name and name in page_text:
-                print(f"在页面文本中找到部门名称: {name}")
-                return True
-            if code and code in page_text:
-                print(f"在页面文本中找到部门编码: {code}")
-                return True
-            # 进一步检查表格
-            table_text = self.page.evaluate("""
+            row_texts = self.page.evaluate("""
                 () => {
-                    const rows = document.querySelectorAll('.ivu-table-tbody tr');
-                    const texts = [];
-                    rows.forEach(row => {
-                        const text = row.innerText || row.textContent || '';
-                        if (text.trim()) texts.push(text.trim());
-                    });
-                    return texts;
+                    const rows = document.querySelectorAll('.km-grid-tr-wrap');
+                    if (rows.length > 0) {
+                        return Array.from(rows).map(r => r.innerText || r.textContent || '');
+                    }
+                    // fallback: split full grid text by newlines
+                    const grid = document.querySelector('.km-grid-body-scroll') ||
+                                 document.querySelector('.km-grid-body') ||
+                                 document.querySelector('.km-grid');
+                    return grid ? (grid.innerText || grid.textContent || '').split('\\n') : [];
                 }
             """)
-            for text in table_text:
-                if name and name in text:
+            for row in row_texts:
+                row = row.strip()
+                if not row:
+                    continue
+                if name and name in row:
+                    print(f"在表格中找到部门名称: {name}")
                     return True
-                if code and code in text:
+                if code and code in row:
+                    print(f"在表格中找到部门编码: {code}")
                     return True
             return False
         except Exception as e:

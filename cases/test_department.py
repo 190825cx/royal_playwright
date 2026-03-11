@@ -65,8 +65,8 @@ class TestDepartment:
         # 准备测试数据
         timestamp = int(time.time())
         department_data = {
-            "code": f"{timestamp % 10000:04d}",  # 商品部门编码（数字）
-            "name": f"测试部门{timestamp % 100:02d}",  # 商品部门（中文）
+            "code": f"{timestamp % 90 + 10:02d}",  # 商品部门编码（2位数字）
+            "name": f"测试{timestamp % 10000:04d}",  # 商品部门（中文，4位数字后缀保证唯一）
         }
         print(f"测试部门数据: {department_data}")
 
@@ -116,7 +116,7 @@ class TestDepartment:
             success_msg = self.department_page.get_success_message(timeout=5000)
             print(f"删除提示: {success_msg}")
 
-            # 验证部门已被删除
+            # 验证部门已被删除（搜索精确名称后表格应为空）
             self.department_page.search_department(department_data["name"])
             time.sleep(2)
             assert not self.department_page.is_department_exists(name=department_data["name"]), (

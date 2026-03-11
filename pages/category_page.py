@@ -112,95 +112,85 @@ class CategoryPage(BasePage):
     # 新增类别
     # ------------------------------------------
     def click_add(self) -> None:
-        """点击新增按钮（先关闭可能拦截的弹窗）"""
+        """点击新增按钮"""
         print("点击'新增'按钮")
-        # 关闭可能遮挡的弹窗
+        # 先关闭可能拦截的弹窗（用关闭按钮，而非Escape）
         try:
-            modal = self.page.locator(".ivu-modal-wrap:visible").first
-            if modal.is_visible(timeout=1000):
-                self.page.keyboard.press("Escape")
+            close_btn = self.page.locator('.ivu-modal-wrap:visible .ivu-modal-close').first
+            if close_btn.is_visible(timeout=1000):
+                close_btn.click()
                 time.sleep(0.5)
         except:
             pass
         self.locator_add_btn.wait_for(state="visible", timeout=10000)
         self.locator_add_btn.click()
-        # 等待抽屉完全打开 - 需要更长时间
-        time.sleep(3)
-        # 等待输入框出现
+        # 等待新增modal出现（通过等待保存按钮出现来确认）
         try:
-            self.page.get_by_placeholder("请输入编码").wait_for(state="visible", timeout=10000)
+            self.page.get_by_role('button', name='保存').first.wait_for(state='visible', timeout=10000)
         except:
             pass
+        time.sleep(1)
 
     def fill_category_name(self, name: str) -> None:
-        """填写类别名称（新增面板中）"""
-        # 等待抽屉加载完成
-        time.sleep(2)
-
-        # 方法1: 通过placeholder精确查找
+        """填写类别名称（通过Vue实例currentValue直接设置）"""
         try:
-            name_input = self.page.get_by_placeholder("请输入名称")
-            name_input.wait_for(state="visible", timeout=8000)
-            name_input.click()
-            time.sleep(0.3)
-            name_input.fill(name)
-            # 触发blur事件以确保表单更新
-            name_input.blur()
-            print(f"填写类别名称: {name}")
-            return
-        except Exception as e:
-            print(f"方法1填写类别名称失败: {e}")
-
-        # 方法2: 查找抽屉内的所有输入框
-        try:
-            drawer = self.page.locator("[class*='drawer']").last
-            if drawer.is_visible():
-                inputs = drawer.locator("input").all()
-                print(f"抽屉内找到 {len(inputs)} 个输入框")
-                if len(inputs) >= 2:
-                    inputs[1].click()
-                    time.sleep(0.3)
-                    inputs[1].fill(name)
-                    inputs[1].blur()
-                    print(f"填写类别名称(方法2): {name}")
-                    return
-        except Exception as e:
-            print(f"方法2填写类别名称失败: {e}")
-
-        # 方法3: 使用JS直接填充 - 需要触发多个事件
-        try:
-            self.page.evaluate("""(name) => {
-                const inputs = document.querySelectorAll('input');
-                for (let i = 0; i < inputs.length; i++) {
-                    const p = inputs[i].placeholder || '';
-                    if (p.includes('名称')) {
-                        // 设置值
-                        inputs[i].value = name;
-                        // 触发多个事件以确保Vue/React能监听到
-                        ['input', 'change', 'blur', 'keyup'].forEach(evtType => {
-                            inputs[i].dispatchEvent(new Event(evtType, { bubbles: true }));
-                        });
-                        // 尝试触发原生事件
-                        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                        nativeInputValueSetter.call(inputs[i], name);
-                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                        inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
-                        return;
+            inp = self.page.locator('.ivu-modal-wrap:visible input.ivu-input-with-word-count').first
+            inp.wait_for(state='visible', timeout=8000)
+            # 通过Vue组件实例设置值，触发v-model响应
+            self.page.evaluate("""
+                (value) => {
+                    const modal = Array.from(document.querySelectorAll('.ivu-modal-wrap'))
+                        .find(m => window.getComputedStyle(m).display !== 'none');
+                    const inp = modal.querySelector('input.ivu-input-with-word-count');
+                    let el = inp;
+                    while (el) {
+                        if (el.__vue__) break;
+                        el = el.parentElement;
+                    }
+                    if (el && el.__vue__ && 'currentValue' in el.__vue__.$data) {
+                        el.__vue__.currentValue = value;
+                        el.__vue__.$emit('input', value);
+                        el.__vue__.$emit('change', value);
                     }
                 }
-            }""", name)
-            print(f"填写类别名称(方法3): {name}")
+            """, name)
+            time.sleep(0.3)
+            print(f"填写类别名称: {name}")
         except Exception as e:
-            print(f"方法3填写类别名称失败: {e}")
+            print(f"填写类别名称失败: {e}")
+
+    def fill_category_sort(self, sort: str = '10') -> None:
+        """填写类别编码（modal中第一个非disabled的ivu-input，2位数字，必须唯一）"""
+        try:
+            modal = self.page.locator('.ivu-modal-wrap:visible').last
+            # 类别编码是第一个非disabled的ivu-input
+            code_inp = modal.locator('input.ivu-input:not([disabled])').nth(0)
+            code_inp.wait_for(state='visible', timeout=8000)
+            code_inp.click(click_count=3)
+            code_inp.press_sequentially(sort, delay=50)
+            code_inp.blur()
+            time.sleep(0.2)
+            print(f"填写类别编码: {sort}")
+        except Exception as e:
+            print(f"填写类别编码失败: {e}")
 
     def save_category(self) -> None:
-        """点击保存按钮并等待结果"""
+        """点击保存按钮并等待结果（处理OS平台编码冲突确认框）"""
         print("点击'保存'按钮")
         save_btn = self.page.get_by_role("button", name="保存").first
         save_btn.wait_for(state="visible", timeout=5000)
         save_btn.click()
         print("保存按钮已点击，等待结果...")
         time.sleep(2)
+        # 处理可能出现的OS平台编码冲突确认框
+        try:
+            confirm_btn = self.page.locator('.ivu-modal-wrap:visible .ivu-btn-primary:has-text("确定")').last
+            if confirm_btn.is_visible(timeout=2000):
+                confirm_btn.click()
+                print("已处理编码冲突确认框")
+                time.sleep(2)
+        except:
+            pass
 
     # ------------------------------------------
     # 查询
@@ -276,18 +266,13 @@ class CategoryPage(BasePage):
     def confirm_delete(self) -> None:
         """确认删除弹窗"""
         try:
-            confirm_btn = self.page.get_by_role("button", name="确定").first
-            confirm_btn.wait_for(state="visible", timeout=5000)
-            confirm_btn.click()
+            confirm_btn = self.page.get_by_role('button', name='确定').first
+            confirm_btn.wait_for(state='visible', timeout=5000)
+            confirm_btn.click(force=True)
             print("已确认删除")
             time.sleep(2)
         except Exception as e:
             print(f"确认删除失败: {e}")
-            try:
-                self.page.keyboard.press("Enter")
-                time.sleep(1)
-            except:
-                pass
 
     def delete_category(self) -> None:
         """选中第一行并删除"""
@@ -303,76 +288,20 @@ class CategoryPage(BasePage):
         新增类别（填写必填项：类别编码、类别名称）
         :param category_data: 类别数据字典，支持 code 和 name
         """
+        import time as _time
         self.click_add()
 
-        # 填写类别编码
-        if "code" in category_data:
-            self.fill_category_code(category_data["code"])
+        # 填写类别编码（2位数字，优先用传入的code，否则用时间戳生成唯一值）
+        code_val = category_data.get("code") or category_data.get("sort") or str(int(_time.time()) % 90 + 10)
+        self.fill_category_sort(code_val)
 
         # 填写类别名称
         if "name" in category_data:
             self.fill_category_name(category_data["name"])
 
     def fill_category_code(self, code: str) -> None:
-        """填写类别编码（新增面板中）"""
-        # 等待抽屉加载完成
-        time.sleep(2)
-
-        # 方法1: 通过placeholder精确查找
-        try:
-            code_input = self.page.get_by_placeholder("请输入编码")
-            code_input.wait_for(state="visible", timeout=8000)
-            code_input.click()
-            time.sleep(0.3)
-            code_input.fill(code)
-            # 触发blur事件以确保表单更新
-            code_input.blur()
-            print(f"填写类别编码: {code}")
-            return
-        except Exception as e:
-            print(f"方法1填写类别编码失败: {e}")
-
-        # 方法2: 查找抽屉内的所有输入框
-        try:
-            drawer = self.page.locator("[class*='drawer']").last
-            if drawer.is_visible():
-                inputs = drawer.locator("input").all()
-                print(f"抽屉内找到 {len(inputs)} 个输入框")
-                if len(inputs) >= 1:
-                    inputs[0].click()
-                    time.sleep(0.3)
-                    inputs[0].fill(code)
-                    inputs[0].blur()
-                    print(f"填写类别编码(方法2): {code}")
-                    return
-        except Exception as e:
-            print(f"方法2填写类别编码失败: {e}")
-
-        # 方法3: 使用JS直接填充 - 需要触发多个事件
-        try:
-            self.page.evaluate("""(code) => {
-                const inputs = document.querySelectorAll('input');
-                for (let i = 0; i < inputs.length; i++) {
-                    const p = inputs[i].placeholder || '';
-                    if (p.includes('编码')) {
-                        // 设置值
-                        inputs[i].value = code;
-                        // 触发多个事件以确保Vue/React能监听到
-                        ['input', 'change', 'blur', 'keyup'].forEach(evtType => {
-                            inputs[i].dispatchEvent(new Event(evtType, { bubbles: true }));
-                        });
-                        // 尝试触发原生事件
-                        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                        nativeInputValueSetter.call(inputs[i], code);
-                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                        inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
-                        return;
-                    }
-                }
-            }""", code)
-            print(f"填写类别编码(方法3): {code}")
-        except Exception as e:
-            print(f"方法3填写类别编码失败: {e}")
+        """类别编码由系统自动生成（disabled），无需填写，此方法保留兼容性"""
+        print(f"类别编码由系统自动生成，跳过填写: {code}")
 
     # ------------------------------------------
     # 断言辅助
@@ -412,36 +341,32 @@ class CategoryPage(BasePage):
 
     def is_category_exists(self, name: str = None, code: str = None) -> bool:
         """
-        检查类别是否存在于列表中
-        :param name: 类别名称
-        :param code: 类别编码
+        检查类别是否存在于表格列表中（逐行精确匹配）
         """
         try:
             self.wait_for_spinner_hidden(timeout=10000)
             time.sleep(1)
-            page_text = self.page.evaluate("() => document.body.innerText")
-            if name and name in page_text:
-                print(f"在页面文本中找到类别名称: {name}")
-                return True
-            if code and code in page_text:
-                print(f"在页面文本中找到类别编码: {code}")
-                return True
-            # 进一步检查表格
-            table_text = self.page.evaluate("""
+            row_texts = self.page.evaluate("""
                 () => {
-                    const rows = document.querySelectorAll('.ivu-table-tbody tr');
-                    const texts = [];
-                    rows.forEach(row => {
-                        const text = row.innerText || row.textContent || '';
-                        if (text.trim()) texts.push(text.trim());
-                    });
-                    return texts;
+                    const rows = document.querySelectorAll('.km-grid-tr-wrap');
+                    if (rows.length > 0) {
+                        return Array.from(rows).map(r => r.innerText || r.textContent || '');
+                    }
+                    const grid = document.querySelector('.km-grid-body-scroll') ||
+                                 document.querySelector('.km-grid-body') ||
+                                 document.querySelector('.km-grid');
+                    return grid ? (grid.innerText || grid.textContent || '').split('\\n') : [];
                 }
             """)
-            for text in table_text:
-                if name and name in text:
+            for row in row_texts:
+                row = row.strip()
+                if not row:
+                    continue
+                if name and name in row:
+                    print(f"在表格中找到类别名称: {name}")
                     return True
-                if code and code in text:
+                if code and code in row:
+                    print(f"在表格中找到类别编码: {code}")
                     return True
             return False
         except Exception as e:
