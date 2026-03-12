@@ -13,10 +13,11 @@ from pages.base_page import BasePage
 class CategoryPage(BasePage):
     """类别管理页面 Page Object"""
 
-    CATEGORY_PATH = "https://royal-pre.cs.kemai.com.cn/archives/ItemClsList"
+    CATEGORY_PATH = "/archives/ItemClsList"
 
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, base_url: str = "https://royal-pre.cs.kemai.com.cn"):
         super().__init__(page)
+        self.base_url = base_url.rstrip("/")
 
         # ============ 工具栏按钮 ============
         self.locator_add_btn = self.page.get_by_role("button", name="新增").first
@@ -60,7 +61,7 @@ class CategoryPage(BasePage):
     # ------------------------------------------
     def navigate_to_category(self) -> None:
         """直接导航到类别管理页面"""
-        self.page.goto(self.CATEGORY_PATH)
+        self.page.goto(self.base_url + self.CATEGORY_PATH)
         self.page.wait_for_load_state("networkidle")
         time.sleep(2)
 
@@ -188,7 +189,7 @@ class CategoryPage(BasePage):
             if confirm_btn.is_visible(timeout=2000):
                 confirm_btn.click()
                 print("已处理编码冲突确认框")
-                time.sleep(2)
+                time.sleep(3)  # 等待冲突确认后保存完成
         except:
             pass
 
@@ -219,7 +220,7 @@ class CategoryPage(BasePage):
         """根据关键词查询类别"""
         print(f"查询类别，关键词: {keyword}")
         try:
-            self.page.goto(self.CATEGORY_PATH)
+            self.page.goto(self.base_url + self.CATEGORY_PATH)
             self.page.wait_for_load_state("networkidle")
             time.sleep(2)
 

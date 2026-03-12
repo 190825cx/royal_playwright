@@ -10,7 +10,6 @@ from typing import Dict
 # 本地插件注册
 pytest_plugins = [
     'plugins.pytest_playwright',
-    'plugins.pytest_base_url_plugin'
 ]
 
 

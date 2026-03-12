@@ -34,6 +34,11 @@ import allure
 
 artifacts_folder = tempfile.TemporaryDirectory(prefix="playwright-pytest-")
 
+ENV_URLS = {
+    "pre": "https://royal-pre.cs.kemai.com.cn",
+    "test": "https://yunfan-cs.cloud.kemai.cn",
+}
+
 
 @pytest.fixture(scope="session", autouse=True)
 def delete_output_dir(pytestconfig: Any) -> None:
@@ -145,15 +150,22 @@ def _build_artifact_test_folder(
 
 
 @pytest.fixture(scope="session")
+def base_url(pytestconfig: Any) -> str:
+    """根据 --env 参数返回目标环境的 base URL"""
+    env = pytestconfig.getoption("--env")
+    return ENV_URLS[env]
+
+
+@pytest.fixture(scope="session")
 def browser_context_args(
     pytestconfig: Any,
     playwright: Playwright,
     device: Optional[str],
+    base_url: str,
 ) -> Dict:
     context_args = {}
     if device:
         context_args.update(playwright.devices[device])
-    base_url = pytestconfig.getoption("--base-url")
     if base_url:
         context_args["base_url"] = base_url
 
@@ -315,6 +327,13 @@ def device(pytestconfig: Any) -> Optional[str]:
 
 def pytest_addoption(parser: Any) -> None:
     group = parser.getgroup("playwright", "Playwright")
+    group.addoption(
+        "--env",
+        action="store",
+        default="pre",
+        choices=["pre", "test"],
+        help="Target environment: pre (预发布) or test (测试环境)",
+    )
     group.addoption(
         "--browser",
         action="append",

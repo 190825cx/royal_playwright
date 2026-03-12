@@ -13,10 +13,11 @@ from pages.base_page import BasePage
 class DepartmentPage(BasePage):
     """部门档案页面 Page Object"""
 
-    DEPARTMENT_PATH = "https://royal-pre.cs.kemai.com.cn/archives/ItemDepartmentList"
+    DEPARTMENT_PATH = "/archives/ItemDepartmentList"
 
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, base_url: str = "https://royal-pre.cs.kemai.com.cn"):
         super().__init__(page)
+        self.base_url = base_url.rstrip("/")
 
         # ============ 左侧菜单 ============
         # 档案菜单 - 精确匹配
@@ -74,7 +75,7 @@ class DepartmentPage(BasePage):
     # ------------------------------------------
     def navigate_to_department(self) -> None:
         """直接导航到部门档案页面"""
-        self.page.goto(self.DEPARTMENT_PATH)
+        self.page.goto(self.base_url + self.DEPARTMENT_PATH)
         self.page.wait_for_load_state("networkidle")
         time.sleep(3)
 
@@ -238,7 +239,7 @@ class DepartmentPage(BasePage):
         """根据关键词查询部门"""
         print(f"查询部门，关键词: {keyword}")
         try:
-            self.page.goto(self.DEPARTMENT_PATH)
+            self.page.goto(self.base_url + self.DEPARTMENT_PATH)
             self.page.wait_for_load_state("networkidle")
             time.sleep(2)
 
@@ -257,6 +258,18 @@ class DepartmentPage(BasePage):
             self.locator_export_btn.click()
             print("已点击导出按钮")
             time.sleep(2)
+            # 关闭导出结果弹窗（含"关闭 Esc"或"关闭"按钮）
+            try:
+                modal_wrap = self.page.locator('.ivu-modal-wrap:visible')
+                if modal_wrap.count() > 0:
+                    close_btn = modal_wrap.locator('button').first
+                    btn_text = close_btn.inner_text(timeout=2000)
+                    print(f"导出弹窗按钮: '{btn_text}'")
+                    close_btn.click(force=True)
+                    time.sleep(1)
+                    print("已关闭导出弹窗")
+            except:
+                pass
         except Exception as e:
             print(f"导出失败: {e}")
 
@@ -288,10 +301,30 @@ class DepartmentPage(BasePage):
             # 先等待confirm弹窗出现
             confirm_footer = self.page.locator('.ivu-modal-confirm-footer')
             confirm_footer.wait_for(state='visible', timeout=5000)
-            # 确定是footer中第二个按钮（第一个是「取消 Esc」）
-            confirm_btn = confirm_footer.locator('button').nth(1)
-            confirm_btn.wait_for(state='visible', timeout=3000)
-            confirm_btn.click(force=True)
+            # 打印弹窗按钮文本用于调试
+            btns = confirm_footer.locator('button').all()
+            for i, btn in enumerate(btns):
+                try:
+                    print(f"  confirm按钮{i}: '{btn.inner_text()}'")
+                except:
+                    pass
+            # 点击"确定"按钮（不含"关闭""查看"等导出弹窗的按钮）
+            all_btns = confirm_footer.locator('button').all()
+            clicked = False
+            for btn in all_btns:
+                try:
+                    txt = btn.inner_text().strip()
+                    if '确定' in txt or 'OK' in txt.upper():
+                        btn.click(force=True)
+                        clicked = True
+                        print(f"点击确认按钮: '{txt}'")
+                        break
+                except:
+                    pass
+            if not clicked:
+                # 备用: footer中第二个按钮
+                confirm_footer.locator('button').nth(1).click(force=True)
+                print("使用备用方式点击确认")
             print("已确认删除")
             time.sleep(3)
         except Exception as e:
@@ -299,6 +332,22 @@ class DepartmentPage(BasePage):
 
     def delete_department(self) -> None:
         """选中第一行并删除"""
+        # 关闭可能残留的弹窗
+        try:
+            close_btn = self.page.locator('.ivu-modal-wrap:visible .ivu-modal-close').first
+            if close_btn.is_visible(timeout=2000):
+                close_btn.click()
+                time.sleep(1)
+                print("关闭残留弹窗")
+        except:
+            pass
+        # 等待表格加载完成后再勾选
+        try:
+            self.locator_table.wait_for(state="visible", timeout=10000)
+            self.wait_for_spinner_hidden(timeout=10000)
+            time.sleep(1)
+        except:
+            pass
         self.select_first_row()
         self.click_delete()
         self.confirm_delete()

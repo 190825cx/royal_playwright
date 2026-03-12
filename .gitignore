@@ -6,8 +6,12 @@ venv/
 .env
 test-results/
 allure-results/
+allure-report/
+report.html
 .pytest_cache/
 .claude/
 AGENTS.md
 *.png
 *.webm
+cases/.auth_state.json
+.playwright-cli/

@@ -13,10 +13,11 @@ from pages.base_page import BasePage
 class ProductItemPage(BasePage):
     """商品档案页面 Page Object"""
 
-    PRODUCT_ITEM_PATH = "https://royal-pre.cs.kemai.com.cn/archives/ItemList"
+    PRODUCT_ITEM_PATH = "/archives/ItemList"
 
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, base_url: str = "https://royal-pre.cs.kemai.com.cn"):
         super().__init__(page)
+        self.base_url = base_url.rstrip("/")
 
         # ============ 导航菜单 ============
         # 左侧导航 - 档案菜单
@@ -188,7 +189,7 @@ class ProductItemPage(BasePage):
     # ------------------------------------------
     def navigate_to_product_item(self) -> None:
         """导航到商品档案页面"""
-        self.page.goto(self.PRODUCT_ITEM_PATH)
+        self.page.goto(self.base_url + self.PRODUCT_ITEM_PATH)
         self.page.wait_for_load_state("networkidle")
         time.sleep(2)
 
@@ -1091,7 +1092,7 @@ class ProductItemPage(BasePage):
             # 5. 最后验证是否回到了列表页
             if not self.locator_add_btn.is_visible(timeout=3000):
                 print("未能自动返回列表页，强制导航...")
-                self.page.goto(self.PRODUCT_ITEM_PATH)
+                self.page.goto(self.base_url + self.PRODUCT_ITEM_PATH)
                 time.sleep(2)
                 
         except Exception as e:
@@ -1105,7 +1106,7 @@ class ProductItemPage(BasePage):
         try:
             # 1. 强制导航到列表页并刷新，确保处于干净的状态
             print("强制导航并刷新页面以进行查询...")
-            self.page.goto(self.PRODUCT_ITEM_PATH)
+            self.page.goto(self.base_url + self.PRODUCT_ITEM_PATH)
             self.page.wait_for_load_state("networkidle")
             time.sleep(3)
             

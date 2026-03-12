@@ -13,10 +13,11 @@ from pages.base_page import BasePage
 class UnitPage(BasePage):
     """单位管理页面 Page Object"""
 
-    UNIT_PATH = "https://royal-pre.cs.kemai.com.cn/archives/ItemUnitList"
+    UNIT_PATH = "/archives/ItemUnitList"
 
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, base_url: str = "https://royal-pre.cs.kemai.com.cn"):
         super().__init__(page)
+        self.base_url = base_url.rstrip("/")
 
         # ============ 工具栏按钮 ============
         self.locator_add_btn = self.page.get_by_role("button", name="新增").first
@@ -61,7 +62,7 @@ class UnitPage(BasePage):
     # ------------------------------------------
     def navigate_to_unit(self) -> None:
         """直接导航到单位管理页面"""
-        self.page.goto(self.UNIT_PATH)
+        self.page.goto(self.base_url + self.UNIT_PATH)
         self.page.wait_for_load_state("networkidle")
         time.sleep(2)
 
@@ -147,7 +148,7 @@ class UnitPage(BasePage):
         """根据关键词查询单位"""
         print(f"查询单位，关键词: {keyword}")
         try:
-            self.page.goto(self.UNIT_PATH)
+            self.page.goto(self.base_url + self.UNIT_PATH)
             self.page.wait_for_load_state("networkidle")
             time.sleep(2)
 

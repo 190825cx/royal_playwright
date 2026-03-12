@@ -4,11 +4,11 @@
 功能: 新增品牌、填写必填项、保存、查询、导出、删除
 """
 
-from pages.login_page import LoginPage
 from pages.brand_page import BrandPage
 from playwright.sync_api import Page
 import pytest
 import allure
+import random
 import time
 
 
@@ -18,33 +18,10 @@ class TestBrand:
     """品牌管理功能测试"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, unlogin_page: Page):
-        """每个测试用例前：登录 → 导航到品牌管理页面"""
-        self.page = unlogin_page
-        self.login_page = LoginPage(unlogin_page)
-        self.brand_page = BrandPage(unlogin_page)
-
-        # 登录
-        self.login_page.navigate("https://royal-pre.cs.kemai.com.cn/login")
-        self.login_page.login("15901234562", "123123123")
-
-        # 等待登录成功
-        assert self.login_page.is_login_successful(timeout=15000), "登录失败"
-        print(f"登录成功，当前URL: {self.page.url}")
-
-        # 等待并关闭可能出现的弹窗
-        time.sleep(2)
-        try:
-            visible_modals = self.page.locator(".ivu-modal-wrap:visible").all()
-            for modal in visible_modals:
-                cancel_btn = modal.locator("button").filter(has_text="取消").first
-                if cancel_btn.count() > 0 and cancel_btn.is_visible():
-                    cancel_btn.click()
-                    time.sleep(0.5)
-            self.page.keyboard.press("Escape")
-            time.sleep(0.5)
-        except:
-            pass
+    def setup(self, logged_page: Page, base_url: str):
+        """每个测试用例前：直接导航到品牌管理页面（复用已保存的登录态）"""
+        self.page = logged_page
+        self.brand_page = BrandPage(logged_page, base_url)
 
         # 导航到品牌管理页面
         self.brand_page.navigate_to_brand()
@@ -63,10 +40,11 @@ class TestBrand:
         allure.dynamic.title("完整流程-新增品牌、填写必填项、保存、查询、导出、删除")
 
         # 准备测试数据
-        timestamp = int(time.time())
+        rand3 = random.randint(100, 999)
+        rand10 = random.randint(1000000000, 9999999999)
         brand_data = {
-            "code": f"B{timestamp % 1000:03d}",  # 品牌编码
-            "name": f"测试品牌{timestamp % 100:02d}",  # 品牌名称
+            "code": f"{rand10}",  # 品牌编码（10位随机数）
+            "name": f"UI测试品牌{rand3}",  # 品牌名称
         }
         print(f"测试品牌数据: {brand_data}")
 
