@@ -4,7 +4,8 @@
 
 ## 测试目标
 
-- 网站地址: https://royal-pre.cs.kemai.com.cn/
+- 测试环境地址: https://yunfan-cs.cloud.kemai.cn/
+- 预发布环境地址: https://royal-pre.cs.kemai.com.cn/
 - 测试账号: 15901234560
 - 测试密码: XXXXXX
 
